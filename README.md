@@ -5,7 +5,7 @@ What is new:
 * Relative number for menu and context menu. (vim only)
 
 Todo:
-* second menu for context menu. (~~随缘更新. That means I may or may not
+* [in alpha stage] second menu for context menu. (~~随缘更新. That means I may or may not
   update~~)
 
 Disable the relative number.
