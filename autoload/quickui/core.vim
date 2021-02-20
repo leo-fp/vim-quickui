@@ -516,6 +516,46 @@ endfunc
 
 
 "----------------------------------------------------------------------
+" fit screen
+" pwin_info: parent window information.
+" width and height: the size of second menu.
+"----------------------------------------------------------------------
+function! quickui#core#around_menu(pwin_info, width, height)
+    let wx = a:pwin_info.line
+    let wy = a:pwin_info.col
+    let cx = line('.')
+    let cy = col('.')
+    let row = wx + a:pwin_info.idx
+    let col = wy + a:pwin_info.width - 1
+    if quickui#core#in_screen(row, col, a:width, a:height)
+        return [row, col]
+    endif
+    " WARNING: when cursor is at the far right, the column number does not equal to
+    " &column"
+    if col + a:width > &columns - 2
+        let col = col - a:pwin_info.width - a:width + 2
+        if quickui#core#in_screen(row, col, a:width, a:height)
+            return [row, col]
+        endif
+    endif
+    if row + a:height > &lines
+        if row - a:height >= 0
+            let row = row - a:height + 3
+            if quickui#core#in_screen(row, col, a:width, a:height)
+                return [row, col]
+            endif
+        else
+            return [1, col]
+        endif
+    endif
+
+    " no idea about what happend, just in case "
+    echo "oops!"
+    return [1, 1]
+endfunc
+
+
+"----------------------------------------------------------------------
 " safe input
 "----------------------------------------------------------------------
 function! quickui#core#input(prompt, text)

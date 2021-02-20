@@ -130,6 +130,7 @@ function! s:vim_create_context(textlist, opts)
 	let keymap = quickui#utils#keymap()
 	let keymap['J'] = 'BOTTOM'
 	let keymap['K'] = 'TOP'
+	let keymap['>'] = 'EXPAND'
 	if has_key(a:opts, 'keymap')
 		for key in keys(a:opts.keymap)
 			let keymap[key] = a:opts.keymap[key]
@@ -401,6 +402,95 @@ function! s:popup_filter(winid, key)
             return 1
         elseif key == 'LEFT' || key == 'RIGHT'
             let g:menu_rept = s:mc_rept
+        elseif key == 'EXPAND'
+            call s:on_expand(hwnd)
+		endif
+        let s:mc_rept = 0   " clean anyway "
+
+		if get(hwnd.opts, 'horizon', 0) != 0
+			if key == 'LEFT'
+				call popup_close(a:winid, -1000)
+			elseif key == 'RIGHT'
+				call popup_close(a:winid, -2000)
+			elseif key == 'PAGEUP'
+				call popup_close(a:winid, -1001)
+			elseif key == 'PAGEDOWN'
+				call popup_close(a:winid, -2001)
+            elseif key == 'HOLD'
+                " WARNING: the number is recorded by menu. no need record again "
+                return
+			endif
+		endif
+		call quickui#context#update(hwnd)
+        let ret = 1
+	endif
+    let g:menu_rept = 0  " clean anyway "
+    let s:mc_rept = 0
+    let ret = 1
+    return ret
+endfunc
+
+function! s:popup_filter_scnd(winid, key)
+	let local = quickui#core#popup_local(a:winid)
+	let hwnd = local.hwnd
+	let winid = hwnd.winid
+    let ret = -2
+	if a:key == "\<ESC>" || a:key == "\<c-c>"
+		call popup_close(a:winid, -1)
+        let ret = 1
+	elseif a:key == "\<CR>" || a:key == "\<SPACE>"
+		call s:on_confirm(hwnd)
+        let ret = 1
+	elseif a:key == "\<LeftMouse>"
+		let ret = s:on_click(hwnd)
+	elseif has_key(hwnd.hotkey, a:key)
+		let key = hwnd.hotkey[a:key]
+		if key >= 0 && key < len(hwnd.items)
+			let item = hwnd.items[key]
+			if item.is_sep == 0 && item.enable != 0
+				let hwnd.index = key
+				call quickui#context#update(hwnd)
+				call popup_setoptions(winid, {})
+				redraw
+				call popup_close(winid, key)
+                let ret = 1
+			endif
+		endif
+	elseif has_key(hwnd.keymap, a:key)
+		let key = hwnd.keymap[a:key]
+		if key == 'ESC'
+			call popup_close(a:winid, -1)
+            let ret = 1
+		elseif key == 'UP'
+            if s:mc_rept == 0
+                let hwnd.index = s:cursor_move(hwnd, hwnd.index, -1)
+            else
+                for i in range(s:mc_rept)
+                    let hwnd.index = s:cursor_move(hwnd, hwnd.index, -1)
+                endfor
+            endif
+		elseif key == 'DOWN'
+            if s:mc_rept == 0
+                let hwnd.index = s:cursor_move(hwnd, hwnd.index, 1)
+            else
+                for i in range(s:mc_rept)
+                    let hwnd.index = s:cursor_move(hwnd, hwnd.index, 1)
+                endfor
+            endif
+		elseif key == 'TOP'
+			let hwnd.index = s:cursor_move(hwnd, hwnd.index, 'TOP')
+		elseif key == 'BOTTOM'
+			let hwnd.index = s:cursor_move(hwnd, hwnd.index, 'BOTTOM')
+        elseif key == 'HOLD'
+            if s:mc_rept != 0
+                " the index is greater than 9 "
+                let s:mc_rept = s:mc_rept * 10 + a:key
+            else
+                let s:mc_rept = a:key
+            endif
+            return 1
+        elseif key == 'LEFT' || key == 'RIGHT'
+            let g:menu_rept = s:mc_rept
 		endif
         let s:mc_rept = 0   " clean anyway "
 
@@ -442,6 +532,32 @@ function! s:on_confirm(hwnd)
 	endif
 	call popup_close(a:hwnd.winid, index)
 	return 1
+endfunc
+
+"----------------------------------------------------------------------
+" press >
+"----------------------------------------------------------------------
+function! s:on_expand(hwnd)
+    let code = a:hwnd.index
+    let item = a:hwnd.items[code]
+    if item.is_sep == 0 && item.enable != 0
+        if item.cmd != ''
+            redraw
+            try
+                let cmd = "let g:quickui_scnd_menu = ".substitute(item.cmd, "call ", "", '')
+                exec cmd
+            catch /.*/
+                echohl Error
+                echom v:exception
+                echohl None
+            endtry
+        endif
+    endif
+    let cur_pos = quickui#core#cursor_pos()
+    let opts = {}
+    let opts.parent_winid = a:hwnd.winid
+    let opts.pwin_idx = a:hwnd.index
+    call s:vim_create_scnd_context(g:quickui_scnd_menu, opts)
 endfunc
 
 
@@ -767,6 +883,79 @@ function! quickui#context#open(textlist, opts)
 	else
 		return s:nvim_create_context(textlist, a:opts)
 	endif
+endfunc
+
+function! s:vim_create_scnd_context(textlist, opts)
+	let border = get(a:opts, 'border', g:quickui#style#border)
+	let hwnd = quickui#context#compile(a:textlist, border)
+	let winid = popup_create(hwnd.image, {'hidden':1, 'wrap':0})
+	let w = hwnd.width
+	let h = hwnd.height
+	let hwnd.winid = winid
+    if s:is_drop == 1
+        let hwnd.index = get(a:opts, 'index', -1)
+    else
+        let hwnd.index = s:last_pos
+    endif
+	let hwnd.opts = deepcopy(a:opts)
+	let ignore_case = get(a:opts, 'ignore_case', 1)
+	let opts = {'minwidth':w, 'maxwidth':w, 'minheight':h, 'maxheight':h}
+
+    " cal pos "
+    let parent_win_info = popup_getpos(a:opts.parent_winid)
+    let parent_win_info.idx = a:opts.pwin_idx
+    let cursor_pos = quickui#core#around_menu(parent_win_info, w, h)
+    let opts.line = cursor_pos[0]
+    let opts.col = cursor_pos[1]
+
+	call popup_move(winid, opts)
+	call setwinvar(winid, '&wincolor', get(a:opts, 'color', 'QuickBG'))
+	let opts = {'cursorline':0, 'drag':0, 'mapping':0}
+	let opts.border = [0,0,0,0,0,0,0,0,0]
+	let opts.title = has_key(a:opts, 'title')? ' ' . a:opts.title . ' ' : ''
+	let opts.padding = [0,0,0,0]
+	let keymap = quickui#utils#keymap()
+	let keymap['J'] = 'BOTTOM'
+	let keymap['K'] = 'TOP'
+	if has_key(a:opts, 'keymap')
+		for key in keys(a:opts.keymap)
+			let keymap[key] = a:opts.keymap[key]
+		endfor
+	endif
+	let hwnd.code = 0
+	let hwnd.state = 1
+	let hwnd.keymap = keymap
+	let hwnd.hotkey = {}
+	for item in hwnd.items
+		if item.enable != 0 && item.key_pos >= 0
+			let key = ignore_case ? tolower(item.key_char) : item.key_char
+			if get(a:opts, 'reserve', 0) == 0
+				let hwnd.hotkey[key] = item.index
+			elseif get(g:, 'quickui_protect_hjkl', 0) != 0
+				let hwnd.hotkey[key] = item.index
+			else
+				if key != 'h' && key != 'j' && key != 'k' && key != 'l'
+					let hwnd.hotkey[key] = item.index
+				endif
+			endif
+		endif
+	endfor
+	let local = quickui#core#popup_local(winid)
+	let local.hwnd = hwnd
+	if get(a:opts, 'manual', 0) == 0
+		let opts.callback = function('s:popup_exit')
+		let opts.filter = function('s:popup_filter_scnd')
+	endif
+	if has_key(a:opts, 'zindex')
+		let opts.zindex = a:opts.zindex
+	endif
+	call popup_setoptions(winid, opts)
+	call quickui#context#update(hwnd)
+	call popup_show(winid)
+
+    " when context created, menu_rept must be 0 "
+    let g:menu_rept = 0
+	return hwnd
 endfunc
 
 

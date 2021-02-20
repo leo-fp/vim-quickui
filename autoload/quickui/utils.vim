@@ -181,6 +181,7 @@ let s:maps['6'] = 'HOLD'
 let s:maps['7'] = 'HOLD'
 let s:maps['8'] = 'HOLD'
 let s:maps['9'] = 'HOLD'
+let s:maps['>'] = 'EXPAND'
 
 
 function! quickui#utils#keymap()
