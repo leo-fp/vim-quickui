@@ -130,7 +130,6 @@ function! s:vim_create_context(textlist, opts)
 	let keymap = quickui#utils#keymap()
 	let keymap['J'] = 'BOTTOM'
 	let keymap['K'] = 'TOP'
-	let keymap['>'] = 'EXPAND'
 	if has_key(a:opts, 'keymap')
 		for key in keys(a:opts.keymap)
 			let keymap[key] = a:opts.keymap[key]
@@ -402,8 +401,6 @@ function! s:popup_filter(winid, key)
             return 1
         elseif key == 'LEFT' || key == 'RIGHT'
             let g:menu_rept = s:mc_rept
-        elseif key == 'EXPAND'
-            call s:on_expand(hwnd)
 		endif
         let s:mc_rept = 0   " clean anyway "
 
@@ -440,6 +437,7 @@ function! s:popup_filter_scnd(winid, key)
         let ret = 1
 	elseif a:key == "\<CR>" || a:key == "\<SPACE>"
 		call s:on_confirm(hwnd)
+        call popup_close(s:pwin_info.parent_winid, -1)
         let ret = 1
 	elseif a:key == "\<LeftMouse>"
 		let ret = s:on_click(hwnd)
@@ -530,7 +528,11 @@ function! s:on_confirm(hwnd)
 	if item.is_sep || item.enable == 0
 		return 1
 	endif
-	call popup_close(a:hwnd.winid, index)
+    if match(a:hwnd.items[index].cmd, "quickui#context#expand") == -1
+        call popup_close(a:hwnd.winid, index)
+    else
+        call s:on_expand(a:hwnd)
+    endif
 	return 1
 endfunc
 
@@ -540,24 +542,9 @@ endfunc
 function! s:on_expand(hwnd)
     let code = a:hwnd.index
     let item = a:hwnd.items[code]
-    if item.is_sep == 0 && item.enable != 0
-        if item.cmd != ''
-            redraw
-            try
-                let cmd = "let g:quickui_scnd_menu = ".substitute(item.cmd, "call ", "", '')
-                exec cmd
-            catch /.*/
-                echohl Error
-                echom v:exception
-                echohl None
-            endtry
-        endif
-    endif
-    let cur_pos = quickui#core#cursor_pos()
-    let opts = {}
-    let opts.parent_winid = a:hwnd.winid
-    let opts.pwin_idx = a:hwnd.index
-    call s:vim_create_scnd_context(g:quickui_scnd_menu, opts)
+    let s:pwin_info.parent_winid = a:hwnd.winid
+    let s:pwin_info.pwin_idx = a:hwnd.index
+    exe item.cmd
 endfunc
 
 
@@ -885,6 +872,17 @@ function! quickui#context#open(textlist, opts)
 	endif
 endfunc
 
+let s:pwin_info = {}
+function! quickui#context#expand(fun)
+    if a:fun == ""
+        return
+    endif
+
+    let F = function(a:fun)
+    let textlist = F()
+    call s:vim_create_scnd_context(textlist, s:pwin_info)
+endfunc
+
 function! s:vim_create_scnd_context(textlist, opts)
 	let border = get(a:opts, 'border', g:quickui#style#border)
 	let hwnd = quickui#context#compile(a:textlist, border)
@@ -892,11 +890,7 @@ function! s:vim_create_scnd_context(textlist, opts)
 	let w = hwnd.width
 	let h = hwnd.height
 	let hwnd.winid = winid
-    if s:is_drop == 1
-        let hwnd.index = get(a:opts, 'index', -1)
-    else
-        let hwnd.index = s:last_pos
-    endif
+    let hwnd.index = 0
 	let hwnd.opts = deepcopy(a:opts)
 	let ignore_case = get(a:opts, 'ignore_case', 1)
 	let opts = {'minwidth':w, 'maxwidth':w, 'minheight':h, 'maxheight':h}
