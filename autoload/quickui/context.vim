@@ -289,6 +289,9 @@ endfunc
 " handle exit code
 "----------------------------------------------------------------------
 function! s:popup_exit(winid, code)
+    if a:code == -1
+        return 0
+    endif
 	let local = quickui#core#popup_local(a:winid)
 	if !has_key(local, 'hwnd')
 		return 0
@@ -878,13 +881,19 @@ function! quickui#context#open(textlist, opts)
 endfunc
 
 let s:pwin_info = {}
-function! quickui#context#expand(fun)
-    if a:fun == ""
+function! quickui#context#expand(foo)
+    if (type(a:foo) == v:t_string && a:foo == "") || (type(a:foo) == v:t_list && empty(a:foo))
         return
     endif
 
-    let F = function(a:fun)
-    let textlist = F()
+    if type(a:foo) == v:t_string
+        let F = function(a:foo)
+        let textlist = F()
+    elseif type(a:foo) == v:t_list
+        let textlist = a:foo
+    else
+        let textlist = []
+    endif
     call s:vim_create_scnd_context(textlist, s:pwin_info)
 endfunc
 
