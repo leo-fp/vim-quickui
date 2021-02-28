@@ -362,7 +362,11 @@ function! s:popup_filter(winid, key)
 				call quickui#context#update(hwnd)
 				call popup_setoptions(winid, {})
 				redraw
-				call popup_close(winid, key)
+                if match(item.cmd, "quickui#context#expand") == -1
+                    call popup_close(winid, key)
+                else
+                    call s:on_expand(hwnd)
+                endif
                 let ret = 1
 			endif
 		endif
@@ -450,6 +454,7 @@ function! s:popup_filter_scnd(winid, key)
 				call quickui#context#update(hwnd)
 				call popup_setoptions(winid, {})
 				redraw
+                call popup_close(s:pwin_info.parent_winid)
 				call popup_close(winid, key)
                 let ret = 1
 			endif
