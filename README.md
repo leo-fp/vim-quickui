@@ -1,16 +1,34 @@
 # About this fork
 An awesome plugin with awesome modifications to meet individual needs.
 
-What is new:
+## What is new:
 * Relative number for menu and context menu. (vim only)
 
-Todo:
-* [in alpha stage] second menu for context menu. (~~随缘更新. That means I may or may not
+## Todo:
+* [in beta stage] second menu for context menu. (~~随缘更新. That means I may or may not
   update~~)
 
-Disable the relative number.
+## How to use:
+**relative number:** 
+
+The relative number is enable by default. To disable
 > let g:quickui_enable_rnu = 0
 
+**second menu (vim only):** 
+
+You can define the second menu as you define the context menu.
+The second menu is expanded by `quickui#context#expand`.
+There are two ways to define what will be expanded.
+* The list.
+* The name string of a function whose return is the menu list. ps: the function
+  must be visible in this plugin.
+
+I wrote a demo in test/test_context.vim. You can use `:so %` to try.
+
+If you find bug or have some idea, fell free to contact me leofupeng@163.com
+
+
+---
 Known bugs:
 * [fixed] The highlight of the first letter in sub menu is occupied by line number.
 * [fixed] unexpected cursor move will occur when following the order of these operations.
