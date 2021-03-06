@@ -11,8 +11,8 @@ An awesome plugin with awesome modifications to meet individual needs.
 ## How to use:
 **relative number:** 
 
-The relative number is enable by default. To disable
-> let g:quickui_enable_rnu = 0
+The relative number is disable by default. To enable
+> let g:quickui_enable_rnu = 1
 
 **second menu (vim only):** 
 
@@ -20,12 +20,12 @@ You can define the second menu as you define the context menu.
 The second menu is expanded by `quickui#context#expand`.
 There are two ways to define what will be expanded.
 * The list.
-* The name string of a function whose return is the menu list. ps: the function
+* The name string of a function whose return is the context menu list. ps: the function
   must be visible in this plugin.
 
 I wrote a demo in test/test_context.vim. You can use `:so %` to try.
 
-If you find bug or have some idea, fell free to contact me leofupeng@163.com
+If you find bug or have some ideas, fell free to contact me leofupeng@163.com
 
 
 ---
@@ -41,6 +41,7 @@ Known bugs:
 Bug reports are welcome.
 
 
+---
 # What Is It ?
 
 There are many keymaps defined in my `.vimrc`. Getting tired from checking `.vimrc` time to time when I forget some, based on latest `+popup` feature (vim 8.2), I created this `vim-quickui` plugin to introduce some basic ui components to enrich vim's interactive experience:
