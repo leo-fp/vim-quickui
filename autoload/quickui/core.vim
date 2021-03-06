@@ -519,12 +519,11 @@ endfunc
 " fit screen
 " pwin_info: parent window information.
 " width and height: the size of second menu.
+" is_drop: the flag indicate the type of context menu
 "----------------------------------------------------------------------
-function! quickui#core#around_menu(pwin_info, width, height)
+function! quickui#core#around_menu(pwin_info, width, height, is_drop)
     let wx = a:pwin_info.line
     let wy = a:pwin_info.col
-    let cx = line('.')
-    let cy = col('.')
     let row = wx + a:pwin_info.idx
     let col = wy + a:pwin_info.width - 1
     if quickui#core#in_screen(row, col, a:width, a:height)
@@ -545,13 +544,13 @@ function! quickui#core#around_menu(pwin_info, width, height)
                 return [row, col]
             endif
         else
-            return [1, col]
+            return [1 + a:is_drop, col]
         endif
     endif
 
     " no idea about what happend, just in case "
     echo "oops!"
-    return [1, 1]
+    return [1 + a:is_drop, 1]
 endfunc
 
 

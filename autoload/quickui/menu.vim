@@ -579,6 +579,7 @@ function! s:context_dropdown()
 	let opts.index = (index < 0 || index >= len(cfg.items))? 0 : index
 	let cfg.index = opts.index
     let opts.is_drop = 1
+    let opts.pwinid = s:cmenu.winid
     let hwnd = quickui#context#open(s:cmenu.dropdown, opts)
 	let s:cmenu.context = hwnd.winid
 	let s:cmenu.state = 1

@@ -21,6 +21,9 @@ let s:mc_rept = 0
 let s:is_drop = 0
 let s:last_pos = 0
 
+" parent parent window id. In other words, the menu id "
+let s:ppwinid = 0
+
 
 "----------------------------------------------------------------------
 " compile
@@ -445,6 +448,7 @@ function! s:popup_filter_scnd(winid, key)
 	elseif a:key == "\<CR>" || a:key == "\<SPACE>"
 		call s:on_confirm(hwnd)
         call popup_close(s:pwin_info.parent_winid, -1)
+        call popup_close(s:ppwinid, -1)
         let ret = 1
 	elseif a:key == "\<LeftMouse>"
 		let ret = s:on_click(hwnd)
@@ -457,8 +461,9 @@ function! s:popup_filter_scnd(winid, key)
 				call quickui#context#update(hwnd)
 				call popup_setoptions(winid, {})
 				redraw
-                call popup_close(s:pwin_info.parent_winid)
 				call popup_close(winid, key)
+                call popup_close(s:pwin_info.parent_winid, -1)
+                call popup_close(s:ppwinid, -1)
                 let ret = 1
 			endif
 		endif
@@ -872,6 +877,7 @@ endfunc
 function! quickui#context#open(textlist, opts)
     let s:mc_rept = 0
     let s:is_drop = get(a:opts, 'is_drop', 0)
+    let s:ppwinid = get(a:opts, "pwinid", 0)
 	let textlist = a:textlist
 	if g:quickui#core#has_nvim == 0
 		return s:vim_create_context(textlist, a:opts)
@@ -894,7 +900,9 @@ function! quickui#context#expand(foo)
     else
         let textlist = []
     endif
-    call s:vim_create_scnd_context(textlist, s:pwin_info)
+    let opts = deepcopy(s:pwin_info, 1)
+    let opts.zindex = 310001
+    call s:vim_create_scnd_context(textlist, opts)
 endfunc
 
 function! s:vim_create_scnd_context(textlist, opts)
@@ -912,7 +920,7 @@ function! s:vim_create_scnd_context(textlist, opts)
     " cal pos "
     let parent_win_info = popup_getpos(a:opts.parent_winid)
     let parent_win_info.idx = a:opts.pwin_idx
-    let cursor_pos = quickui#core#around_menu(parent_win_info, w, h)
+    let cursor_pos = quickui#core#around_menu(parent_win_info, w, h, s:is_drop)
     let opts.line = cursor_pos[0]
     let opts.col = cursor_pos[1]
 
