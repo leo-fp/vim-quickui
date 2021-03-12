@@ -2,10 +2,13 @@
 An awesome plugin with awesome modifications to meet individual needs.
 
 ## Todo:
+**ps**: Assume all modifications are for menu and context menu unless otherwise
+marked or described in readme.
 * [x] Relative number for menu and context menu. (vim only)
 * [x] Second menu for context menu.
-* [] Second menu for drop menu in vim and neovim.
-* [] Second menu for context menu for neovim.
+* [x] Second menu for drop menu in vim.
+* [] Second menu for neovim.
+* [] Enhance item.
 * [] More widgets.
 
 ## How to use:
@@ -25,7 +28,8 @@ There are two ways to define what will be expanded.
 
 I wrote a demo in test/test_context.vim. You can use `:so %` to try.
 
-If you find bug or have some ideas, fell free to contact me leofupeng@163.com
+if you have any questions or want to get involved! Feel free to contact me
+leofupeng@163.com.
 
 
 ---
