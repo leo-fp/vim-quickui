@@ -519,7 +519,8 @@ endfunc
 " fit screen
 " pwin_info: parent window information.
 " width and height: the size of second menu.
-" is_drop: the flag indicate the type of context menu
+" is_drop: the flag indicate the type of context menu.
+"       0 -> false. 1 -> true
 "----------------------------------------------------------------------
 function! quickui#core#around_menu(pwin_info, width, height, is_drop)
     let wx = a:pwin_info.line

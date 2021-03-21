@@ -549,14 +549,11 @@ function! s:on_confirm(hwnd)
 	return 1
 endfunc
 
-"----------------------------------------------------------------------
-" press >
-"----------------------------------------------------------------------
 function! s:on_expand(hwnd)
-    let code = a:hwnd.index
-    let item = a:hwnd.items[code]
+    let idx = a:hwnd.index
+    let item = a:hwnd.items[idx]
     let s:pwin_info.parent_winid = a:hwnd.winid
-    let s:pwin_info.pwin_idx = a:hwnd.index
+    let s:pwin_info.pwin_idx = idx
     exe item.cmd
 endfunc
 
@@ -740,6 +737,163 @@ function! s:nvim_create_context(textlist, opts)
 		if ch == "\<ESC>" || ch == "\<c-c>"
 			break
 		elseif ch == " " || ch == "\<cr>"
+            if match(item.cmd, "quickui#context#expand") != -1
+                " the second menu detected "
+                call s:on_expand(hwnd)
+            endif
+			let index = hwnd.index
+			if index >= 0 && index < len(hwnd.items)
+				let item = hwnd.items[index]
+				if item.is_sep == 0 && item.enable != 0
+					let retval = index
+					break
+				endif
+			endif
+		elseif ch == "\<LeftMouse>"
+			let hr = s:on_click(hwnd)
+			if hr == -2 || hr >= 0
+				let retval = hr
+				break
+			endif
+		elseif has_key(hwnd.hotkey, ch)
+			let hr = hwnd.hotkey[ch]
+			if hr >= 0
+				let hwnd.index = hr
+				let retval = hr
+				break
+			endif
+		elseif has_key(hwnd.keymap, ch)
+			let key = hwnd.keymap[ch]
+			if key == 'ESC'
+				break
+			elseif key == 'UP'
+				let hwnd.index = s:cursor_move(hwnd, hwnd.index, -1)
+			elseif key == 'DOWN'
+				let hwnd.index = s:cursor_move(hwnd, hwnd.index, 1)
+			elseif key == 'TOP'
+				let hwnd.index = s:cursor_move(hwnd, hwnd.index, 'TOP')
+			elseif key == 'BOTTOM'
+				let hwnd.index = s:cursor_move(hwnd, hwnd.index, 'BOTTOM')
+			endif
+			if get(hwnd.opts, 'horizon', 0) != 0
+				if key == 'LEFT'
+					let retval = -1000
+					break
+				elseif key == 'RIGHT'
+					let retval = -2000
+					break
+				elseif key == 'PAGEUP'
+					let retval = -1001
+					break
+				elseif key == 'PAGEDOWN'
+					let retval = -2001
+					break
+				endif
+			endif
+		endif
+	endwhile
+	call nvim_win_close(winid, 0)
+	if get(a:opts, 'lazyredraw', 0) == 0
+		redraw
+	endif
+	if get(g:, 'quickui_show_tip', 0) != 0
+		if get(a:opts, 'lazyredraw', 0) == 0
+			echo ''
+			redraw
+		endif
+	endif
+	let g:quickui#context#code = retval
+	let g:quickui#context#current = hwnd
+	let g:quickui#context#cursor = hwnd.index
+	if has_key(hwnd.opts, 'callback')
+		let F = function(hwnd.opts.callback)
+		call F(retval)
+	endif
+	if retval >= 0 && retval < len(hwnd.items)
+		let item = hwnd.items[retval]
+		if item.is_sep == 0 && item.enable != 0
+			if item.cmd != ''
+				redraw
+				try
+					exec item.cmd
+				catch /.*/
+					echohl Error
+					echom v:exception
+					echohl None
+				endtry
+			endif
+		endif
+	endif
+	return retval
+endfunc
+
+"----------------------------------------------------------------------
+" open context menu in neovim and returns index
+"----------------------------------------------------------------------
+function! s:nvim_create_scnd_context(textlist, opts)
+	let border = get(a:opts, 'border', g:quickui#style#border)
+	let ignore_case = get(a:opts, 'ignore_case', 1)
+	let hwnd = quickui#context#compile(a:textlist, border)
+	let bid = quickui#core#scratch_buffer('context', hwnd.image)
+	let hwnd.bid = bid
+	let w = hwnd.width
+	let h = hwnd.height
+	let hwnd.index = get(a:opts, 'index', -1)
+	let hwnd.opts = deepcopy(a:opts)
+	let opts = {'width':w, 'height':h, 'focusable':1, 'style':'minimal'}
+	let opts.relative = 'editor'
+
+    let parent_win_info = {}
+    let parent_win_info.line = nvim_win_get_position(s:pwin_info.parent_winid)[0]
+    let parent_win_info.col = nvim_win_get_position(s:pwin_info.parent_winid)[1]
+    let parent_win_info.width = nvim_win_get_width(s:pwin_info.parent_winid)
+    let parent_win_info.idx = hwnd.index
+    let pos = quickui#core#around_menu(parent_win_info, w, h, s:is_drop)
+    let opts.row = pos[0] - 1
+    let opts.col = pos[1] - 1
+
+	let winid = nvim_open_win(bid, 0, opts)
+	let hwnd.winid = winid
+	let keymap = quickui#utils#keymap()
+	let keymap['J'] = 'BOTTOM'
+	let keymap['K'] = 'TOP'
+	let hwnd.code = 0
+	let hwnd.state = 1
+	let hwnd.keymap = keymap
+	let hwnd.hotkey = {}
+	for item in hwnd.items
+		if item.enable != 0 && item.key_pos >= 0
+			let key = ignore_case ? tolower(item.key_char) : item.key_char
+			if get(a:opts, 'reserve', 0) == 0
+				let hwnd.hotkey[key] = item.index
+			elseif get(g:, 'quickui_protect_hjkl', 0) != 0
+				let hwnd.hotkey[key] = item.index
+			else
+				if key != 'h' && key != 'j' && key != 'k' && key != 'l'
+					let hwnd.hotkey[key] = item.index
+				endif
+			endif
+		endif
+	endfor
+	let hwnd.opts.color = get(a:opts, 'color', 'QuickBG')
+    call nvim_win_set_option(winid, 'winhl', 'Normal:'. hwnd.opts.color)
+	let retval = -1
+	while 1
+		noautocmd call quickui#context#update(hwnd)
+		redraw
+		try
+			let code = getchar()
+		catch /^Vim:Interrupt$/
+			let code = "\<C-C>"
+		endtry
+		let ch = (type(code) == v:t_number)? nr2char(code) : code
+		if ch == "\<ESC>" || ch == "\<c-c>"
+			break
+		elseif ch == " " || ch == "\<cr>"
+            if match(item.cmd, "quickui#context#expand") != -1
+                " the second menu detected "
+                call s:on_expand(hwnd)
+            endif
 			let index = hwnd.index
 			if index >= 0 && index < len(hwnd.items)
 				let item = hwnd.items[index]
@@ -902,7 +1056,11 @@ function! quickui#context#expand(foo)
     endif
     let opts = deepcopy(s:pwin_info, 1)
     let opts.zindex = 310001
-    call s:vim_create_scnd_context(textlist, opts)
+	if g:quickui#core#has_nvim == 0
+        call s:vim_create_scnd_context(textlist, opts)
+    else
+        call s:nvim_create_scnd_context(textlist, opts)
+    endif
 endfunc
 
 function! s:vim_create_scnd_context(textlist, opts)
