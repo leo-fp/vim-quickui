@@ -275,7 +275,6 @@ function! quickui#context#update(hwnd)
 	endif
 endfunc
 
-
 "----------------------------------------------------------------------
 " close context
 "----------------------------------------------------------------------
@@ -726,7 +725,7 @@ function! s:nvim_create_context(textlist, opts)
     call nvim_win_set_option(winid, 'winhl', 'Normal:'. hwnd.opts.color)
 	let retval = -1
 	while 1
-		noautocmd call quickui#context#update(hwnd)
+        noautocmd call quickui#context#update(hwnd)
 		redraw
 		try
 			let code = getchar()
@@ -834,8 +833,10 @@ function! s:nvim_create_scnd_context(textlist, opts)
 	let border = get(a:opts, 'border', g:quickui#style#border)
 	let ignore_case = get(a:opts, 'ignore_case', 1)
 	let hwnd = quickui#context#compile(a:textlist, border)
-	let bid = quickui#core#scratch_buffer('context', hwnd.image)
-	let hwnd.bid = bid
+    let buf = nvim_create_buf(v:false, v:true)
+    call nvim_buf_set_lines(buf, 0, -1, v:true, hwnd.image)
+	let bid = buf
+	let hwnd.bid = buf
 	let w = hwnd.width
 	let h = hwnd.height
 	let hwnd.index = get(a:opts, 'index', -1)
@@ -878,73 +879,69 @@ function! s:nvim_create_scnd_context(textlist, opts)
 	let hwnd.opts.color = get(a:opts, 'color', 'QuickBG')
     call nvim_win_set_option(winid, 'winhl', 'Normal:'. hwnd.opts.color)
 	let retval = -1
-	while 1
-		noautocmd call quickui#context#update(hwnd)
-		redraw
-		try
-			let code = getchar()
-		catch /^Vim:Interrupt$/
-			let code = "\<C-C>"
-		endtry
-		let ch = (type(code) == v:t_number)? nr2char(code) : code
-		if ch == "\<ESC>" || ch == "\<c-c>"
-			break
-		elseif ch == " " || ch == "\<cr>"
-            if match(item.cmd, "quickui#context#expand") != -1
-                " the second menu detected "
-                call s:on_expand(hwnd)
+    while 1
+        noautocmd call quickui#context#update(hwnd)
+        call timer_start(1000, { -> execute("redraw") })
+        try
+            let code = getchar()
+        catch /^Vim:Interrupt$/
+            let code = "\<C-C>"
+        endtry
+        let ch = (type(code) == v:t_number)? nr2char(code) : code
+        if ch == "\<ESC>" || ch == "\<c-c>"
+            break
+        elseif ch == " " || ch == "\<cr>"
+            let index = hwnd.index
+            if index >= 0 && index < len(hwnd.items)
+                let item = hwnd.items[index]
+                if item.is_sep == 0 && item.enable != 0
+                    let retval = index
+                    break
+                endif
             endif
-			let index = hwnd.index
-			if index >= 0 && index < len(hwnd.items)
-				let item = hwnd.items[index]
-				if item.is_sep == 0 && item.enable != 0
-					let retval = index
-					break
-				endif
-			endif
-		elseif ch == "\<LeftMouse>"
-			let hr = s:on_click(hwnd)
-			if hr == -2 || hr >= 0
-				let retval = hr
-				break
-			endif
-		elseif has_key(hwnd.hotkey, ch)
-			let hr = hwnd.hotkey[ch]
-			if hr >= 0
-				let hwnd.index = hr
-				let retval = hr
-				break
-			endif
-		elseif has_key(hwnd.keymap, ch)
-			let key = hwnd.keymap[ch]
-			if key == 'ESC'
-				break
-			elseif key == 'UP'
-				let hwnd.index = s:cursor_move(hwnd, hwnd.index, -1)
-			elseif key == 'DOWN'
-				let hwnd.index = s:cursor_move(hwnd, hwnd.index, 1)
-			elseif key == 'TOP'
-				let hwnd.index = s:cursor_move(hwnd, hwnd.index, 'TOP')
-			elseif key == 'BOTTOM'
-				let hwnd.index = s:cursor_move(hwnd, hwnd.index, 'BOTTOM')
-			endif
-			if get(hwnd.opts, 'horizon', 0) != 0
-				if key == 'LEFT'
-					let retval = -1000
-					break
-				elseif key == 'RIGHT'
-					let retval = -2000
-					break
-				elseif key == 'PAGEUP'
-					let retval = -1001
-					break
-				elseif key == 'PAGEDOWN'
-					let retval = -2001
-					break
-				endif
-			endif
-		endif
-	endwhile
+        elseif ch == "\<LeftMouse>"
+            let hr = s:on_click(hwnd)
+            if hr == -2 || hr >= 0
+                let retval = hr
+                break
+            endif
+        elseif has_key(hwnd.hotkey, ch)
+            let hr = hwnd.hotkey[ch]
+            if hr >= 0
+                let hwnd.index = hr
+                let retval = hr
+                break
+            endif
+        elseif has_key(hwnd.keymap, ch)
+            let key = hwnd.keymap[ch]
+            if key == 'ESC'
+                break
+            elseif key == 'UP'
+                let hwnd.index = s:cursor_move(hwnd, hwnd.index, -1)
+            elseif key == 'DOWN'
+                let hwnd.index = s:cursor_move(hwnd, hwnd.index, 1)
+            elseif key == 'TOP'
+                let hwnd.index = s:cursor_move(hwnd, hwnd.index, 'TOP')
+            elseif key == 'BOTTOM'
+                let hwnd.index = s:cursor_move(hwnd, hwnd.index, 'BOTTOM')
+            endif
+            if get(hwnd.opts, 'horizon', 0) != 0
+                if key == 'LEFT'
+                    let retval = -1000
+                    break
+                elseif key == 'RIGHT'
+                    let retval = -2000
+                    break
+                elseif key == 'PAGEUP'
+                    let retval = -1001
+                    break
+                elseif key == 'PAGEDOWN'
+                    let retval = -2001
+                    break
+                endif
+            endif
+        endif
+    endwhile
 	call nvim_win_close(winid, 0)
 	if get(a:opts, 'lazyredraw', 0) == 0
 		redraw
