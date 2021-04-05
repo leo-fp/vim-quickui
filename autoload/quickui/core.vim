@@ -527,6 +527,12 @@ function! quickui#core#around_menu(pwin_info, width, height, is_drop)
     let wy = a:pwin_info.col
     let row = wx + a:pwin_info.idx
     let col = wy + a:pwin_info.width - 1
+    " correct the coordinate for neovim
+    if g:quickui#core#has_nvim == 1
+        let row = row + 2
+        let col = col + 1
+    endif
+
     if quickui#core#in_screen(row, col, a:width, a:height)
         return [row, col]
     endif
