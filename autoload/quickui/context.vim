@@ -736,18 +736,19 @@ function! s:nvim_create_context(textlist, opts)
 		if ch == "\<ESC>" || ch == "\<c-c>"
 			break
 		elseif ch == " " || ch == "\<cr>"
-            if match(item.cmd, "quickui#context#expand") != -1
-                " the second menu detected "
-                call s:on_expand(hwnd)
+            let index = hwnd.index
+            if index >= 0 && index < len(hwnd.items)
+                let item = hwnd.items[index]
+                if match(item.cmd, "quickui#context#expand") != -1
+                    "the second menu detected "
+                    call s:on_expand(hwnd)
+                    continue
+                endif
+                if item.is_sep == 0 && item.enable != 0
+                    let retval = index
+                    break
+                endif
             endif
-			let index = hwnd.index
-			if index >= 0 && index < len(hwnd.items)
-				let item = hwnd.items[index]
-				if item.is_sep == 0 && item.enable != 0
-					let retval = index
-					break
-				endif
-			endif
 		elseif ch == "\<LeftMouse>"
 			let hr = s:on_click(hwnd)
 			if hr == -2 || hr >= 0
@@ -791,39 +792,41 @@ function! s:nvim_create_context(textlist, opts)
 			endif
 		endif
 	endwhile
-	call nvim_win_close(winid, 0)
-	if get(a:opts, 'lazyredraw', 0) == 0
-		redraw
-	endif
-	if get(g:, 'quickui_show_tip', 0) != 0
-		if get(a:opts, 'lazyredraw', 0) == 0
-			echo ''
-			redraw
-		endif
-	endif
-	let g:quickui#context#code = retval
-	let g:quickui#context#current = hwnd
-	let g:quickui#context#cursor = hwnd.index
-	if has_key(hwnd.opts, 'callback')
-		let F = function(hwnd.opts.callback)
-		call F(retval)
-	endif
-	if retval >= 0 && retval < len(hwnd.items)
-		let item = hwnd.items[retval]
-		if item.is_sep == 0 && item.enable != 0
-			if item.cmd != ''
-				redraw
-				try
-					exec item.cmd
-				catch /.*/
-					echohl Error
-					echom v:exception
-					echohl None
-				endtry
-			endif
-		endif
-	endif
-	return retval
+    if nvim_win_is_valid(winid)
+        call nvim_win_close(winid, 0)
+    endif
+    if get(a:opts, 'lazyredraw', 0) == 0
+        redraw
+    endif
+    if get(g:, 'quickui_show_tip', 0) != 0
+        if get(a:opts, 'lazyredraw', 0) == 0
+            echo ''
+            redraw
+        endif
+    endif
+    let g:quickui#context#code = retval
+    let g:quickui#context#current = hwnd
+    let g:quickui#context#cursor = hwnd.index
+    if has_key(hwnd.opts, 'callback')
+        let F = function(hwnd.opts.callback)
+        call F(retval)
+    endif
+    if retval >= 0 && retval < len(hwnd.items)
+        let item = hwnd.items[retval]
+        if item.is_sep == 0 && item.enable != 0
+            if item.cmd != ''
+                redraw
+                try
+                    exec item.cmd
+                catch /.*/
+                    echohl Error
+                    echom v:exception
+                    echohl None
+                endtry
+            endif
+        endif
+    endif
+    return retval
 endfunc
 
 "----------------------------------------------------------------------
@@ -891,6 +894,9 @@ function! s:nvim_create_scnd_context(textlist, opts)
         if ch == "\<ESC>" || ch == "\<c-c>"
             break
         elseif ch == " " || ch == "\<cr>"
+            if nvim_win_is_valid(s:pwin_info.parent_winid)
+                call nvim_win_close(s:pwin_info.parent_winid, 0)
+            endif
             let index = hwnd.index
             if index >= 0 && index < len(hwnd.items)
                 let item = hwnd.items[index]
@@ -942,7 +948,7 @@ function! s:nvim_create_scnd_context(textlist, opts)
             endif
         endif
     endwhile
-	call nvim_win_close(winid, 0)
+    call nvim_win_close(winid, 0)
 	if get(a:opts, 'lazyredraw', 0) == 0
 		redraw
 	endif

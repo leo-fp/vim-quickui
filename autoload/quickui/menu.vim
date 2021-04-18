@@ -662,7 +662,7 @@ function! s:neovim_dropdown()
 	let cfg = s:cmenu.current[item.name]
 	let s:cmenu.dropdown = []
 	for item in cfg.items
-		let s:cmenu.dropdown += [[item.name, '', item.help]]
+		let s:cmenu.dropdown += [[item.name, item.cmd, item.help]]
 	endfor
 	let index = get(cfg, 'index', 0)
 	let opts.index = (index < 0 || index >= len(cfg.items))? 0 : index

@@ -323,14 +323,16 @@ function! quickui#core#win_execute(winid, command)
 			keepalt call win_execute(a:winid, join(a:command, "\n"))
 		endif
 	else
-		let current = nvim_get_current_win()
-		keepalt call nvim_set_current_win(a:winid)
-		if type(a:command) == v:t_string
-			exec a:command
-		elseif type(a:command) == v:t_list
-			exec join(a:command, "\n")
-		endif
-		keepalt call nvim_set_current_win(current)
+        let current = nvim_get_current_win()
+        if nvim_win_is_valid(a:winid)
+            keepalt call nvim_set_current_win(a:winid)
+        endif
+        if type(a:command) == v:t_string
+            exec a:command
+        elseif type(a:command) == v:t_list
+            exec join(a:command, "\n")
+        endif
+        keepalt call nvim_set_current_win(current)
 	endif
 endfunc
 
