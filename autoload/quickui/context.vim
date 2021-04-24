@@ -21,6 +21,10 @@ let s:mc_rept = 0
 let s:is_drop = 0
 let s:last_pos = 0
 
+" 0 -> closed by <cr>. 1 -> opening. -1: closed by <ESC>.
+" only used in nvim
+let s:is_scnd_open = -1
+
 " parent parent window id. In other words, the menu id "
 let s:ppwinid = 0
 
@@ -727,6 +731,9 @@ function! s:nvim_create_context(textlist, opts)
 	while 1
         noautocmd call quickui#context#update(hwnd)
 		redraw
+        if s:is_scnd_open == 0
+            break
+        endif
 		try
 			let code = getchar()
 		catch /^Vim:Interrupt$/
@@ -892,10 +899,11 @@ function! s:nvim_create_scnd_context(textlist, opts)
         endtry
         let ch = (type(code) == v:t_number)? nr2char(code) : code
         if ch == "\<ESC>" || ch == "\<c-c>"
+            let s:is_scnd_open = -1
             break
         elseif ch == " " || ch == "\<cr>"
             if nvim_win_is_valid(s:pwin_info.parent_winid)
-                call nvim_win_close(s:pwin_info.parent_winid, 0)
+                let s:is_scnd_open = 0
             endif
             let index = hwnd.index
             if index >= 0 && index < len(hwnd.items)
@@ -948,7 +956,11 @@ function! s:nvim_create_scnd_context(textlist, opts)
             endif
         endif
     endwhile
+
+    " close second menu.
     call nvim_win_close(winid, 0)
+    let s:is_scnd_open = 0
+
 	if get(a:opts, 'lazyredraw', 0) == 0
 		redraw
 	endif
@@ -1048,6 +1060,7 @@ function! quickui#context#expand(foo)
     if (type(a:foo) == v:t_string && a:foo == "") || (type(a:foo) == v:t_list && empty(a:foo))
         return
     endif
+    let s:is_scnd_open = 1
 
     if type(a:foo) == v:t_string
         let F = function(a:foo)
@@ -1064,6 +1077,7 @@ function! quickui#context#expand(foo)
     else
         call s:nvim_create_scnd_context(textlist, opts)
     endif
+    
 endfunc
 
 function! s:vim_create_scnd_context(textlist, opts)

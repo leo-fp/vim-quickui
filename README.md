@@ -4,12 +4,11 @@ An awesome plugin with awesome modifications to meet individual needs.
 ## Todo:
 **ps**: Assume all modifications are for menu and context menu unless otherwise
 marked or described in readme.
-* [x] Relative number for menu and context menu. (vim only)
-* [x] Second menu for context menu.
-* [x] Second menu for drop menu in vim.
-* [] Second menu for neovim.
-* [] Enhance item.
-* [] More widgets.
+feature | vim | neovim
+-|:-:|-
+relative number | done |
+second menu     | done | done
+enhanced item   |      |
 
 ## How to use:
 **relative number:** 
@@ -28,7 +27,7 @@ There are two ways to define what will be expanded.
 
 I wrote a demo in test/test_context.vim. You can use `:so %` to try.
 
-if you have any questions or want to get involved! Feel free to contact me
+if you have any questions or want to get involved. Feel free to contact me
 leofupeng@163.com.
 
 
