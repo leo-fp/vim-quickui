@@ -8,7 +8,7 @@ feature | vim | neovim
 -|:-:|-
 relative number | done |
 second menu     | done | done
-enhanced item   |      |
+~~enhanced item~~   |      |
 
 ## How to use:
 **relative number:** 
@@ -16,7 +16,7 @@ enhanced item   |      |
 The relative number is disable by default. To enable
 > let g:quickui_enable_rnu = 1
 
-**second menu (vim only):** 
+**second menu:** 
 
 You can define the second menu as you define the context menu.
 The second menu is expanded by `quickui#context#expand`.
