@@ -322,9 +322,7 @@ function! s:popup_exit(winid, code)
     endif
 	let redrawed = 0
 	if has_key(hwnd.opts, 'callback')
-		let l:F = function(hwnd.opts.callback)
-		call l:F(code)
-		unlet l:F
+		call call(hwnd.opts.callback, [code])
 	endif
 	silent! call popup_hide(a:winid)
 	if code >= 0 && code < len(hwnd.items)
@@ -974,8 +972,7 @@ function! s:nvim_create_scnd_context(textlist, opts)
 	let g:quickui#context#current = hwnd
 	let g:quickui#context#cursor = hwnd.index
 	if has_key(hwnd.opts, 'callback')
-		let F = function(hwnd.opts.callback)
-		call F(retval)
+		call call(hwnd.opts.callback, [retval])
 	endif
 	if retval >= 0 && retval < len(hwnd.items)
 		let item = hwnd.items[retval]
@@ -1180,7 +1177,7 @@ if 0
 	let opts.callback = 'MyCallback'
 	let opts.reduce = 1
 	function! MyCallback(code)
-		echo "callback: " . a:code
+		echom "callback: " . a:code
 	endfunc
 	if 1
 		let menu = quickui#context#open(lines, opts)

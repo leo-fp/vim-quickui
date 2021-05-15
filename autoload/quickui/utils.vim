@@ -469,7 +469,7 @@ endfunc
 "----------------------------------------------------------------------
 " make border
 "----------------------------------------------------------------------
-function! quickui#utils#make_border(width, height, border, title, button)
+function! quickui#utils#make_border(width, height, border, title, ...)
 	let pattern = quickui#core#border_get(a:border)
 	let image = []
 	let w = a:width
@@ -484,10 +484,20 @@ function! quickui#utils#make_border(width, height, border, title, button)
 	endwhile
 	let text = pattern[6] . repeat(pattern[7], w) . pattern[8]
 	let image += [text]
+	let button = (a:0 > 0)? (a:1) : 0
+	let align = (a:0 > 1)? (a:2) : ''
 	let text = image[0]
 	let title = quickui#core#string_fit(a:title, w)
-	let text = quickui#core#string_compose(text, 1, title)
-	if a:button != 0
+	if align == '' || align == 'l'
+		let text = quickui#core#string_compose(text, 1, title)
+	elseif align == 'm'
+		let left = (w + 2 - len(title)) / 2
+		let text = quickui#core#string_compose(text, left, title)
+	elseif align == 'r'
+		let left = w + 2 - len(title) - 1
+		let text = quickui#core#string_compose(text, left, title)
+	endif
+	if button != 0
 		let text = quickui#core#string_compose(text, w + 1, 'X')
 	endif
 	let image[0] = text
@@ -546,9 +556,9 @@ endfunc
 
 
 "----------------------------------------------------------------------
-" size can be in '24' or '24%'
+" size can be in '24' or '24%' or '0.25'
 "----------------------------------------------------------------------
-function! quickui#utils#size_parse(text, is_height)
+function! quickui#utils#read_size(text, maxsize)
 	if type(a:text) == v:t_number
 		return a:text
 	elseif type(a:text) == v:t_string
@@ -556,16 +566,23 @@ function! quickui#utils#size_parse(text, is_height)
 		if text =~ '%$'
 			let text = strpart(text, 0, len(text) - 1)
 			let ratio = str2nr(text)
-			if a:is_height == 0
-				let num = (&columns) * ratio / 100
-				return (num < &columns)? num : &columns
-			else
-				let num = (&lines) * ratio / 100
-				return (num < &lines)? num : &lines
-			endif
+			let num = (a:maxsize) * ratio / 100
+			return (num < a:maxsize)? num : a:maxsize
 		else
-			return str2nr(text)
+			let fsize = str2float(a:text)
+			if fsize <= 1.0
+				return float2nr(fsize * a:maxsize)
+			endif
+			let size = float2nr(fsize)
+			return (size > a:maxsize)? a:maxsize : size
 		endif
+	elseif type(a:text) == v:t_float
+		let fsize = a:text
+		if fsize <= 1.0
+			return float2nr(fsize * a:maxsize)
+		endif
+		let size = float2nr(fsize)
+		return (size > a:maxsize)? a:maxsize : size
 	endif
 endfunc
 
@@ -576,7 +593,7 @@ endfunc
 "----------------------------------------------------------------------
 function! quickui#utils#tools_width()
 	let width = get(g:, 'quickui_tools_width', '60%')
-	let size = quickui#utils#size_parse(width, 0)
+	let size = quickui#utils#read_size(width, &columns)
 	let minimal = (60 < &columns)? 60 : &columns
 	let size = (size < minimal)? minimal : size
 	return (size > &columns)? &columns : size
