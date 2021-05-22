@@ -46,4 +46,9 @@ endfunc
 let s:label = deepcopy(s:widget)
 let s:label.text = ''
 
-
+"----------------------------------------------------------------------
+" API
+"----------------------------------------------------------------------
+function! quickui#widget#create() abort
+    return deepcopy(s:widget)
+endfunc
