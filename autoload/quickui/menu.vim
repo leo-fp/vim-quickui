@@ -368,7 +368,7 @@ endfunc
 " render menu
 "----------------------------------------------------------------------
 function! quickui#menu#update()
-    function! RenderIndx()
+    function! s:renderIndx()
 		if g:quickui#core#has_nvim == 1 || g:quickui_enable_rnu == 0
             return
         endif
@@ -383,7 +383,7 @@ function! quickui#menu#update()
 
         call popup_settext(s:cmenu.winid, menu)
     endfunc
-    call RenderIndx()
+    call s:renderIndx()
 
 	let winid = s:cmenu.winid
 	if s:cmenu.state == 0

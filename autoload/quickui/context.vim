@@ -109,7 +109,7 @@ function! s:vim_create_context(textlist, opts)
 	let border = get(a:opts, 'border', g:quickui#style#border)
 	let hwnd = quickui#context#compile(a:textlist, border)
 	let winid = popup_create(hwnd.image, {'hidden':1, 'wrap':0})
-	let w = hwnd.width
+    let [w, h] = [hwnd.width, hwnd.height]
 	let h = hwnd.height
 	let hwnd.winid = winid
     if s:is_drop == 1
@@ -183,7 +183,7 @@ endfunc
 " render menu 
 "----------------------------------------------------------------------
 function! quickui#context#update(hwnd)
-    function! RenderContext(hwnd)
+    function! s:renderContext(hwnd)
 		if g:quickui#core#has_nvim == 1 || g:quickui_enable_rnu == 0
             return
         endif
@@ -212,12 +212,11 @@ function! quickui#context#update(hwnd)
 
         call popup_settext(a:hwnd.winid, new_image)
     endfunc
-    call RenderContext(a:hwnd)
+    call s:renderContext(a:hwnd)
 
 	let winid = a:hwnd.winid
 	let size = len(a:hwnd.items)
-	let w = a:hwnd.width
-	let h = a:hwnd.height
+    let [w, h] = [a:hwnd.width, a:hwnd.height]
 	let cmdlist = ['syn clear']
 	for item in a:hwnd.items
 		let index = item.index
